@@ -1,0 +1,52 @@
+{
+  "name": "cbdb",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Circuit Breaker DashBoard",
+  "main": "main.js",
+  "devDependencies": {
+    "browserify": "12.0.1",
+    "babelify": "7.2.0",
+    "babel-preset-es2015": "6.1.18",
+    "babel-preset-stage-0": "6.1.18",
+    "babel-preset-react": "6.1.18",
+    "babel-plugin-transform-runtime": "6.1.4",
+    "uglify-js": "2.6.1",
+    "watchify": "3.6.1",
+    "eslint": "1.9.0",
+    "eslint-plugin-react": "3.9.0",
+    "exorcist": "0.4.0",
+    "babel-eslint": "4.1.5"
+  },
+  "scripts": {
+    "check": "",
+    "start": "watchify --fast -o ./static/js/bundle.js -v -d ./react/**/*.jsx",
+    "build": "echo fixme"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hatchery/cbdb.git"
+  },
+  "author": "David J Felix",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hatchery/cbdb/issues"
+  },
+  "brwoserify": {
+    "transform": [
+      [
+        "babelify",
+        {
+          "presets": [
+            "es2015",
+            "react",
+            "stage-0"
+          ],
+          "plugins": [
+            "transform-runtime"
+          ]
+        }
+      ]
+    ]
+  }
+}
