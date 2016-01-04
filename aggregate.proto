@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+
+// AggregateBool is a container that counts individual instances of true/false
+// It should be used for aggregating streams of bool values to appropriately
+// account for their distribution.
+message AggregateBool {
+  uint64 true = 1;
+  uint64 false = 2;
+}
+
+// AggregateBoolOption is an example container that can switch from single
+// bool via a bool type and multi bools via an AggregateBool type.
+// It may be desirable to copy this code and use it directly
+message AggregateBoolOption {
+  oneof bool_or_aggregate_bool {
+    bool single = 1;
+    AggregateBool multi = 2;
+  }
+}
+    
