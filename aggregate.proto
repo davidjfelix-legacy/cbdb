@@ -1,5 +1,6 @@
 syntax = "proto3";
-
+package cbdb.aggregate;
+option java_package = "com.hatchery.cbdb.aggregate"
 
 // AggregateBool is a container that counts individual instances of true/false
 // It should be used for aggregating streams of bool values to appropriately
