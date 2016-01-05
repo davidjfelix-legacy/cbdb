@@ -1,5 +1,9 @@
 syntax = "proto3";
 
+// LatencyHistogram is a container for latency percentiles
+// Common percentiles are declared here but they are not all
+// required. Clients will be expected to gracefully handle
+// the percentiles listed.
 message LatencyHistogram {
   uint64 percentile_0 = 1;
   uint64 percentile_25 = 2;
@@ -16,6 +20,9 @@ message LatencyHistogram {
   uint64 percentile_100 = 13;
 }
 
+// AggregateLatencyHistogram is a container for AggregateLongs
+// which contain information about common latency percentiles.
+// See LatencyHisotgram and AggregateLong for more information.
 message AggregateLatencyHistogram {
   AggregateLong percentile_0 = 1;
   AggregateLong percentile_25 = 2;
@@ -32,6 +39,11 @@ message AggregateLatencyHistogram {
   AggregateLong percentile_100 = 13;
 }
 
+// CommandMetrics is a container for data sent by a circuit breaker
+// command. It contains rolling information and counts for
+// metrics related to an executed command.
+// This container has more than 15 fields and is organized with
+// prioritization for more common fields
 message CommandMetrics {
   // Command Metric general info
   string name = 1;
@@ -70,6 +82,49 @@ message CommandMetrics {
   uint64 rolling_semaphore_rejected_count = 24;
 }
 
+// AggregateCommandMetrics is a container for data sent by multiple
+// cirucuit breakers for a given command. It contains rolling
+// information and counts for metrics related to an executed command.
+// This container has more than 15 fields and is organized with
+// prioritization for more common fields
+message AggregateCommandMetrics {
+  // Command Metric general info
+  string name = 1;
+  string group = 2;
+  AggregateTimestamp current_time = 3;
+  AggregateBool is_circuitbreaker_open = 4;
+  
+  // Basic Counters
+  AggregateLong error_percent = 5;
+  AggregateLong error_count = 6;
+  AggregateLong request_count = 7;
+  
+  // Latencies
+  AggregateLong execute_latency_mean_ms = 8;
+  AggregateLatencyHistogram execute_latency_ms = 9;
+  AggregateLong total_latency_mean_ms = 10;
+  AggregateLatencyHistogram total_latency_ms = 11;
+  
+  // Common rolling counts
+  AggregateLong rolling_success_count = 12;
+  AggregateLong rolling_fail_count = 13;
+  AggregateLong rolling_exception_count = 14;
+  AggregateLong rolling_timeout_count = 15;
+  
+  // Uncommon rolling counts (note, this is past the 16 index of protobuf)
+  AggregateLong current_concurrent_execution_count = 16;
+  AggregateLong rolling_fallback_fail_count = 17;
+  AggregateLong rolling_fallback_rejection_count= 18;
+  AggregateLong rolling_fallback_success_count = 19;
+  AggregateLong rolling_cache_response_count = 20;
+  AggregateLong rolling_short_circuited_count = 21;
+  
+  // Advanced rolling counts
+  AggregateLong rolling_collapsed_count = 22;
+  AggregateLong rolling_pool_rejected_count = 23;
+  AggregateLong rolling_semaphore_rejected_count = 24;
+}
+
 message PoolMetrics {
   string name = 1;
   uint64 current_active_count = 2;
@@ -86,6 +141,24 @@ message PoolMetrics {
   uint64 rolling_window_prop_ms = 13;
 }
 
+message AggregatePoolMetrics {
+  string name = 1;
+  AggregateLong current_active_count = 2;
+  AggregateLong current_completed_task_count = 3;
+  AggregateLong current_core_pool_size = 4;
+  AggregateLong current_largest_pool_size = 5;
+  AggregateLong current_maximum_pool_size = 6;
+  AggregateLong current_pool_size = 7;
+  AggregateLong current_queue_size = 8;
+  AggregateLong current_task_count = 9;
+  AggregateLong queue_rejection_thresh = 10;
+  AggregateLong rolling_count_threads_executed = 11;
+  AggregateLong rolling_max_active_threads = 12;
+  AggregateLong rolling_window_prop_ms = 13;
+}
+
+// A StreamedMessage is a single message from one of the reporting sources
+// This switches context based on message source, as the connection is shared
 message StreamedMessage {
   oneof message_type {
     CommandMetrics command_metrics = 1;
@@ -93,6 +166,9 @@ message StreamedMessage {
   }
 }
 
+// An AggregateStreamedMessage is a single message from an aggregator
+// of reporting sources. It switches context based on message source, as
+// the connection is shared.
 message AggregateStreamedMessage {
   oneof message_type {
     AggregateCommandMetrics command_metrics = 1;
@@ -100,6 +176,10 @@ message AggregateStreamedMessage {
   }
 }
 
+// AggregateStreamedMessageTag is a tagged union that is able to be either
+// an aggregate streamed message or a streamed message.
+// Clients should use this type, as they cannot be sure whether their source
+// will be a single stream or an aggregate stream.
 message AggregateStreamedMessageTag {
   oneof single_or_aggregate {
     StreamedMessage single = 1;
