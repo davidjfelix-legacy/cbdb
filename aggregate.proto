@@ -70,3 +70,15 @@ message AggregateDoubleTag {
     AggregateDouble many = 2;
   }
 }
+
+// AggregateTimestamp is a container that holds information about a set of
+// Timestamps. It should be used for aggregating streams of timestamp values
+// to appropriately account for their distribution.
+message AggregateTimestamp {
+  Timestamp mean = 1;
+  uint64 source_count = 2;
+  Timestamp min = 3; // earliest
+  Timestamp max = 4; // latest
+  Timestamp median = 5;
+  double standard_deviation = 6;
+}
