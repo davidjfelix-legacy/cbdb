@@ -1,6 +1,6 @@
 syntax = "proto3";
 package cbdb.metrics;
-option java_package = com.hatchery.cbdb.metrics;
+option java_package = "com.hatchery.cbdb.metrics";
 
 import 'aggregate.proto'
 
