@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+message LatencyHistogram {
+  uint64 percentile_0 = 1;
+  uint64 percentile_25 = 2;
+  uint64 percentile_50 = 3;
+  uint64 percentile_75 = 4;
+  uint64 percentile_90 = 5;
+  uint64 percentile_95 = 6;
+  uint64 percentile_99 = 7;
+  uint64 percentile_995 = 8;
+  uint64 percentile_999 = 9;
+  uint64 percentile_9999 = 10;
+  uint64 percentile_99999 = 11;
+  uint64 percentile_999999 = 12;
+  uint64 percentile_100 = 13;
+}
+
+message AggregateLatencyHistogram {
+  AggregateLong percentile_0 = 1;
+  AggregateLong percentile_25 = 2;
+  AggregateLong percentile_50 = 3;
+  AggregateLong percentile_75 = 4;
+  AggregateLong percentile_90 = 5;
+  AggregateLong percentile_95 = 6;
+  AggregateLong percentile_99 = 7;
+  AggregateLong percentile_995 = 8;
+  AggregateLong percentile_999 = 9;
+  AggregateLong percentile_9999 = 10;
+  AggregateLong percentile_99999 = 11;
+  AggregateLong percentile_999999 = 12;
+  AggregateLong percentile_100 = 13;
+}
+
+message CommandMetrics {
+  // Command Metric general info
+  string name = 1;
+  string group = 2;
+  Timestamp current_time = 3;
+  bool is_circuitbreaker_open = 4;
+  
+  // Basic Counters
+  uint64 error_percent = 5;
+  uint64 error_count = 6;
+  uint64 request_count = 7;
+  
+  // Latencies
+  uint64 execute_latency_mean_ms = 8;
+  LatencyHistogram execute_latency_ms = 9;
+  uint64 total_latency_mean_ms = 10;
+  LatencyHistogram total_latency_ms = 11;
+  
+  // Common rolling counts
+  uint64 rolling_success_count = 12;
+  uint64 rolling_fail_count = 13;
+  uint64 rolling_exception_count = 14;
+  uint64 rolling_timeout_count = 15;
+  
+  // Uncommon rolling counts (note, this is past the 16 index of protobuf)
+  uint64 current_concurrent_execution_count = 16;
+  uint64 rolling_fallback_fail_count = 17;
+  uint64 rolling_fallback_rejection_count= 18;
+  uint64 rolling_fallback_success_count = 19;
+  uint64 rolling_cache_response_count = 20;
+  uint64 rolling_short_circuited_count = 21;
+  
+  // Advanced rolling counts
+  uint64 rolling_collapsed_count = 22;
+  uint64 rolling_pool_rejected_count = 23;
+  uint64 rolling_semaphore_rejected_count = 24;
+}
+
+message PoolMetrics {
+  string name = 1;
+  uint64 current_active_count = 2;
+  uint64 current_completed_task_count = 3;
+  uint64 current_core_pool_size = 4;
+  uint64 current_largest_pool_size = 5;
+  uint64 current_maximum_pool_size = 6;
+  uint64 current_pool_size = 7;
+  uint64 current_queue_size = 8;
+  uint64 current_task_count = 9;
+  uint64 queue_rejection_thresh = 10;
+  uint64 rolling_count_threads_executed = 11;
+  uint64 rolling_max_active_threads = 12;
+  uint64 rolling_window_prop_ms = 13;
+}
+
+message StreamedMessage {
+  oneof message_type {
+    CommandMetrics command_metrics = 1;
+    PoolMetrics pool_metrics = 2;
+  }
+}
+
+message AggregateStreamedMessage {
+  oneof message_type {
+    AggregateCommandMetrics command_metrics = 1;
+    AggregatePoolMetrics pool_metrics = 2;
+  }
+}
+
+message AggregateStreamedMessageTag {
+  oneof single_or_aggregate {
+    StreamedMessage single = 1;
+    AggregateStreamedMessage aggregate = 2;
+  }
+}
