@@ -1,0 +1,25 @@
+{
+  "name": "circuitBreakerName",
+  "successCount": 4,
+  "failureCount": 5,
+  "shortCircuitCount": 5,
+  "currentTime": "2012-04-23T18:25:43.511Z",
+  "windowDuration": 10000,
+  "breakerStatus": {
+    "open": 4,
+    "closed": 3
+  },
+  "latency": {
+    "mean": 100,
+    "median": 10,
+    "min": 1,
+    "max": 1000,
+    "25": 1,
+    "75", 1,
+    "90", 1,
+    "95", 1,
+    "99", 1,
+    "99.5", 1,
+    "99.9", 1
+  }
+}
