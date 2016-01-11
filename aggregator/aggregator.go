@@ -39,6 +39,11 @@ type CircuitBreaker struct{
 	latency           latencyHistogram
 }
 
+type SSEString string
+
+func (s *SSEString) CircuitBreakerFromHystrix() CircuitBreaker, error {
+}
+
 func (c *CircuitBreaker) ToJSON() string {
 	return fmt.Sprintf(
 		"{" +
