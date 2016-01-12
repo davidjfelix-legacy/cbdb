@@ -6,15 +6,17 @@ import (
 	"net/http"
 	"time"
 	"fmt"
+	"errors"
+	"encoding/json"
 )
 
 
-type breakerCount struct {
-	openCount   int64
-	closedCount int64
+type BreakerCount struct {
+	OpenCount   int64
+	ClosedCount int64
 }
 
-type latencyHistogram struct {
+type LatencyHistogram struct {
 	mean          int64
 	median        int64
 	min           int64
@@ -29,30 +31,110 @@ type latencyHistogram struct {
 }
 
 type CircuitBreaker struct {
-	name              string
-	successCount      int64
-	failCount         int64
-	shortCircuitCount int64
-	windowDuration    time.Duration
-	currentTime       time.Time
-	breakerStatus     breakerCount
-	latency           latencyHistogram
+	Name              string
+	SuccessCount      int64
+	FailCount         int64
+	ShortCircuitCount int64
+	WindowDuration    time.Duration
+	CurrentTime       time.Time
+	BreakerStatus     BreakerCount
+	Latency           LatencyHistogram
 }
 
 type SSEString string
 
+// A snapshot transcription of the hystrix.stream JSON object
+// This is here for legacy support only. Only update if the fields change or
+// In the event of an inevitable bug.
 type HystrixStream struct {
+	// Forgive my ridiculous formatting in this ridiculous object
+	CurrentConcurrentExecutionCount int
+	CurrentTime          string            `json:"currentTime,string"`
+	ErrorPercentage      int               `json:"errorPercentage,int"`
+	ErrorCount           int               `json:"errorCount,int"`
+	Group                string            `json:"group,string"`
+	IsCircuitBreakerOpen bool              `json:"isCircuitBreakerOpen,bool"`
+	LatencyExecute       HystrixHistogram  `json:"latencyExecute,HystrixHistogram"`
+	LatencyExecuteMean   int               `json:"latencyExecute_mean,int"`
+	LatencyTotal         HystrixHistogram  `json:"latencyTotal,HystrixHistogram"`
+	LatencyTotalMean     int               `json:"latencyTotal_mean,int"`
+	Name                 string            `json:"name,string"`
+	ReportingHosts       int               `json:"reportingHosts,int"`
+	RequestCount         int               `json:"requestCount,int"`
+	RollingCountCollapsedRequests   int    `json:"rollingCountCollapsedRequests,int"`
+	RollingCountExceptionsThrown    int    `json:"rollingCountExceptionsThrown,int"`
+	RollingCountFailure             int    `json:"rollingCountFailure,int"`
+	RollingCountFallbackFailure     int    `json:"rollingCountFallbackFailure,int"`
+	RollingCountFallbackRejection   int    `json:"rollingCountFallbackRejection,int"`
+	RollingCountResponseFromCache   int    `json:"rollingCountResponseFromCache,int"`
+	RollingCountSemaphoreRejected   int    `json:"rollingCountSemaphoreRejected,int"`
+	RollingCountShortCircuited      int    `json:"rollingCountShortCircuited,int"`
+	RollingCountSuccess             int    `json:"rollingCountSuccess,int"`
+	RollingCountThreadPoolRejected  int    `json:"rollingCountThreadPoolRejected,int"`
+	RollingCountTimeout             int    `json:"rollingCOuntTimeout,int"`
+	Type                            string `json:"type,string"`
+	// Don't blame me for these awful names.
+	// I'm preserving the bad names Hystrix uses
+	PropertyValueCircuitBreakerEnabled                            bool   `json:"propertyValue_circuitBreakerEnabled,bool"`
+	PropertyValueCircuitBreakerErrorThresholdPercentage           int    `json:"propertyValue_circuitBreakerErrorThresholdPercentage,int"`
+	PropertyValueCircuitBreakerForceOpen                          bool   `json:"propertyValue_circuitBreakerForceOpen,bool"`
+	PropertyValueCircuitBreakerForceClosed                        bool   `json:"propertyValue_circuitBreakerForceClosed,bool"`
+	PropertyValueCircuitBreakerRequestVolumeThreshold             int    `json:"propertyValue_circuitBreakerRequestVolumeThreshold,int"`
+	PropertyValueCircuitBreakerSleepWindowInMilliseconds          int    `json:"propertyValue_circuitBreakerSleepWindowInMilliseconds,int"`
+	PropertyValueExecutionIsolationSemaphoreMaxConcurrentRequests int    `json:"propertyValue_executionIsolationSemaphoreMaxConcurrentRequests,int"`
+	PropertyValueExecutionIsolationStrategy                       string `json:"propertyValue_executionIsolationStrategy,string"`
+	PropertyValueExecutionIsolationThreadPoolKeyOverride          string `json:"propertyValue_executionIsolationThreadPoolKeyOverride,string"`
+	PropertyValueExecutionIsolationThreadTimeoutInMilliseconds    int    `json:"propertyValue_executionIsolationThreadTimeoutInMilliseconds,string"`
+	PropertyValueFallbackIsolationSemaphoreMaxConcurrentRequests  int    `json:"propertyValue_fallbackIsolationSeampahoreMaxConcurrentRequests,int"`
+	PropertyValueMetricsRollingStatisticalWindowInMilliseconds    int    `json:"propertyValue_metricsRollingStatisticalWindowInMilliseconds,int"`
+	PropertyValueRequestCacheEnabled                              bool   `json:"propertyValue_requestCacheEnabled,bool"`
+	PropertyValueRequestLogEnabled                                bool   `json:"propertyValue_requestLogEnabled,bool"`
 }
 
-func (s *SSEString) ParseHystrixStream() HystrixStream, error {
-	return HystrixStream, nil
+// A snapshot transcription of the histogram objects hystrix.stream JSON object
+// This is here for legacy support only. Only update if the fields change or
+// In the event of an inevitable bug.
+type HystrixHistogram struct {
+	//minimum
+	percentile0   int `json:"0,string"`
+	percentile25  int `json:"25,string"`
+	//median
+	percentile50  int `json:"50,string"`
+	percentile75  int `json:"75,string"`
+	percentile90  int `json:"90,string"`
+	percentile95  int `json:"95,string"`
+	percentile995 int `json:"99.5,string"`
+	//maximum
+	percentile100 int `json:"100,string"`
 }
 
-func (h *HystrixStream) ToCircuitBreaker() CircuitBreaker, error {
+func (s SSEString) ParseHystrixStream() (HystrixStream, error) {
+	// The eventsource string isn't big short circuit
+	if len(s) < 8 {
+		return HystrixStream{}, errors.New("Event string too short to parse")
+	}
+
+	// The eventsource string isn't data
+	if s[:6] != "data: " {
+		return HystrixStream{}, errors.New("Can't parse non-data event")
+	}
+
+	// Try to parse JSON
+	var ret HystrixStream
+	resp := json.Unmarshal([]byte(s[7:]), &ret)
+
+	if resp == nil {
+		return ret, nil
+	} else {
+		return HystrixStream{}, resp
+	}
+}
+
+func (h HystrixStream) ToCircuitBreaker() (CircuitBreaker, error) {
 	return CircuitBreaker{}, nil
 }
 
-func (c *CircuitBreaker) ToJSON() string {
+func (c CircuitBreaker) ToJSON() string {
 	return fmt.Sprintf(
 		"{" +
 			"\"name\":%v," +
@@ -64,17 +146,17 @@ func (c *CircuitBreaker) ToJSON() string {
 			"\"breakerStatus\":%v," +
 			"\"latency\":%v" +
 		"}",
-		c.name,
-		c.successCount,
-		c.failCount,
-		c.shortCircuitCount,
-		(c.windowDuration.Nanoseconds() / 1000),
-		c.currentTime.Format(time.RFC3339),
-		c.breakerStatus.toJSON(),
-		c.latency.toJSON())
+		c.Name,
+		c.SuccessCount,
+		c.FailCount,
+		c.ShortCircuitCount,
+		(c.WindowDuration.Nanoseconds() / 1000),
+		c.CurrentTime.Format(time.RFC3339),
+		c.BreakerStatus.toJSON(),
+		c.Latency.toJSON())
 }
 
-func (l *latencyHistogram) toJSON() string {
+func (l LatencyHistogram) toJSON() string {
 	return fmt.Sprintf(
 		"{" +
 			"\"mean\":%v," +
@@ -102,14 +184,14 @@ func (l *latencyHistogram) toJSON() string {
 		l.percentile999)
 }
 
-func (b *breakerCount) toJSON() string {
+func (b BreakerCount) toJSON() string {
 	return fmt.Sprintf(
 		"{" +
 			"\"open\":%v," +
 			"\"closed\":%v" +
 		"}",
-		b.openCount,
-		b.closedCount)
+		b.OpenCount,
+		b.ClosedCount)
 }
 
 func main() {
