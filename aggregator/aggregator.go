@@ -28,7 +28,7 @@ type latencyHistogram struct {
 	percentile999 int64
 }
 
-type CircuitBreaker struct{
+type CircuitBreaker struct {
 	name              string
 	successCount      int64
 	failCount         int64
@@ -41,7 +41,15 @@ type CircuitBreaker struct{
 
 type SSEString string
 
-func (s *SSEString) CircuitBreakerFromHystrix() CircuitBreaker, error {
+type HystrixStream struct {
+}
+
+func (s *SSEString) ParseHystrixStream() HystrixStream, error {
+	return HystrixStream, nil
+}
+
+func (h *HystrixStream) ToCircuitBreaker() CircuitBreaker, error {
+	return CircuitBreaker{}, nil
 }
 
 func (c *CircuitBreaker) ToJSON() string {
