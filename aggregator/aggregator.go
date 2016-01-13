@@ -48,7 +48,7 @@ type SSEString string
 // In the event of an inevitable bug.
 type HystrixStream struct {
 	// Forgive my ridiculous formatting in this ridiculous object
-	CurrentConcurrentExecutionCount int
+	CurrentConcurrentExecutionCount int    `json:"currentConcurrentExecutionCount,int"`
 	CurrentTime          string            `json:"currentTime,string"`
 	ErrorPercentage      int               `json:"errorPercentage,int"`
 	ErrorCount           int               `json:"errorCount,int"`
