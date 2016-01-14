@@ -18,17 +18,17 @@ type BreakerCount struct {
 }
 
 type LatencyHistogram struct {
-	mean          int64
-	median        int64
-	min           int64
-	max           int64
-	percentile25  int64
-	percentile75  int64
-	percentile90  int64
-	percentile95  int64
-	percentile99  int64
-	percentile995 int64
-	percentile999 int64
+	Mean          int64
+	Median        int64
+	Min           int64
+	Max           int64
+	Percentile25  int64
+	Percentile75  int64
+	Percentile90  int64
+	Percentile95  int64
+	Percentile99  int64
+	Percentile995 int64
+	Percentile999 int64
 }
 
 type CircuitBreaker struct {
@@ -98,16 +98,17 @@ type HystrixStream struct {
 // In the event of an inevitable bug.
 type HystrixHistogram struct {
 	//minimum
-	percentile0   int `json:"0,string"`
-	percentile25  int `json:"25,string"`
+	Percentile0   int64 `json:"0,int64"`
+	Percentile25  int64 `json:"25,int64"`
 	//median
-	percentile50  int `json:"50,string"`
-	percentile75  int `json:"75,string"`
-	percentile90  int `json:"90,string"`
-	percentile95  int `json:"95,string"`
-	percentile995 int `json:"99.5,string"`
+	Percentile50  int64 `json:"50,int64"`
+	Percentile75  int64 `json:"75,int64"`
+	Percentile90  int64 `json:"90,int64"`
+	Percentile95  int64 `json:"95,int64"`
+	Percentile99  int64 `json:"99,int64"`
+	Percentile995 int64 `json:"99.5,int64"`
 	//maximum
-	percentile100 int `json:"100,string"`
+	Percentile100 int64 `json:"100,int64"`
 }
 
 func (s SSEString) ParseHystrixStream() (HystrixStream, error) {
@@ -132,17 +133,24 @@ func (s SSEString) ParseHystrixStream() (HystrixStream, error) {
 	}
 }
 
-func (h HystrixHistogram) ToLatencyHistogram() (LatencyHistogram, error) {
-	return LatencyHistogram{}, nil
+func (h HystrixHistogram) ToLatencyHistogram(mean int64) LatencyHistogram {
+	return LatencyHistogram {
+		Mean: mean,
+		Median: h.Percentile50,
+		Min: h.Percentile0,
+		Max: h.Percentile100,
+		Percentile25: h.Percentile25,
+		Percentile75: h.Percentile75,
+		Percentile90: h.Percentile90,
+		Percentile95: h.Percentile95,
+		Percentile99: h.Percentile99,
+		Percentile995: h.Percentile995,
+		// Unfortunately, the closest we have is an estimate between 99.5 and 100. We'll take it
+		Percentile999: (h.Percentile100 + h.Percentile995) / 2,
+	}
 }
 
-func (h HystrixStream) ToCircuitBreaker() (*CircuitBreaker, error) {
-	latency, err := h.LatencyTotal.ToLatencyHistogram()
-
-	if err != nil {
-		return nil, err
-	}
-
+func (h HystrixStream) ToCircuitBreaker() (CircuitBreaker, error) {
 	var breakerCount BreakerCount
 	if h.IsCircuitBreakerOpen {
 		breakerCount = BreakerCount{OpenCount: 1, ClosedCount: 0}
@@ -155,13 +163,13 @@ func (h HystrixStream) ToCircuitBreaker() (*CircuitBreaker, error) {
 	// This is how I parse the time.
 	parsedTime, err := strconv.Atoi(h.CurrentTime)
 	if err != nil {
-		return nil, err
+		return CircuitBreaker{}, err
 	} else {
 		// Split hystrix ms encoded unix time into s and ns
 		currentTime = time.Unix(int64(parsedTime / 1000), int64((parsedTime % 1000) * 1000))
 	}
 
-	return &CircuitBreaker {
+	return CircuitBreaker {
 		Name: h.Group + h.Name,
 		SuccessCount: h.RollingCountSuccess,
 		FailCount: 1,
@@ -170,7 +178,7 @@ func (h HystrixStream) ToCircuitBreaker() (*CircuitBreaker, error) {
 		WindowDuration: 1,
 		CurrentTime: currentTime,
 		BreakerStatus: breakerCount,
-		Latency: latency,
+		Latency: h.LatencyTotal.ToLatencyHistogram(h.LatencyTotalMean),
 	}, nil
 }
 
@@ -213,17 +221,17 @@ func (l LatencyHistogram) toJSON() string {
 			"\"99.5\"%v," +
 			"\"99.9\"%v" +
 		"}",
-		l.mean,
-		l.median,
-		l.min,
-		l.max,
-		l.percentile25,
-		l.percentile75,
-		l.percentile90,
-		l.percentile95,
-		l.percentile99,
-		l.percentile995,
-		l.percentile999)
+		l.Mean,
+		l.Median,
+		l.Min,
+		l.Max,
+		l.Percentile25,
+		l.Percentile75,
+		l.Percentile90,
+		l.Percentile95,
+		l.Percentile99,
+		l.Percentile995,
+		l.Percentile999)
 }
 
 func (b BreakerCount) toJSON() string {
