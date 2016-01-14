@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"errors"
 	"encoding/json"
+	"strconv"
 )
 
 
@@ -34,6 +35,7 @@ type CircuitBreaker struct {
 	Name              string
 	SuccessCount      int64
 	FailCount         int64
+	FallbackCount     int64
 	ShortCircuitCount int64
 	WindowDuration    time.Duration
 	CurrentTime       time.Time
@@ -48,45 +50,45 @@ type SSEString string
 // In the event of an inevitable bug.
 type HystrixStream struct {
 	// Forgive my ridiculous formatting in this ridiculous object
-	CurrentConcurrentExecutionCount int    `json:"currentConcurrentExecutionCount,int"`
+	CurrentConcurrentExecutionCount int64  `json:"currentConcurrentExecutionCount,int64"`
 	CurrentTime          string            `json:"currentTime,string"`
-	ErrorPercentage      int               `json:"errorPercentage,int"`
-	ErrorCount           int               `json:"errorCount,int"`
+	ErrorPercentage      int64             `json:"errorPercentage,int64"`
+	ErrorCount           int64             `json:"errorCount,int64"`
 	Group                string            `json:"group,string"`
 	IsCircuitBreakerOpen bool              `json:"isCircuitBreakerOpen,bool"`
 	LatencyExecute       HystrixHistogram  `json:"latencyExecute,HystrixHistogram"`
-	LatencyExecuteMean   int               `json:"latencyExecute_mean,int"`
+	LatencyExecuteMean   int64             `json:"latencyExecute_mean,int64"`
 	LatencyTotal         HystrixHistogram  `json:"latencyTotal,HystrixHistogram"`
-	LatencyTotalMean     int               `json:"latencyTotal_mean,int"`
+	LatencyTotalMean     int64             `json:"latencyTotal_mean,int64"`
 	Name                 string            `json:"name,string"`
-	ReportingHosts       int               `json:"reportingHosts,int"`
-	RequestCount         int               `json:"requestCount,int"`
-	RollingCountCollapsedRequests   int    `json:"rollingCountCollapsedRequests,int"`
-	RollingCountExceptionsThrown    int    `json:"rollingCountExceptionsThrown,int"`
-	RollingCountFailure             int    `json:"rollingCountFailure,int"`
-	RollingCountFallbackFailure     int    `json:"rollingCountFallbackFailure,int"`
-	RollingCountFallbackRejection   int    `json:"rollingCountFallbackRejection,int"`
-	RollingCountResponseFromCache   int    `json:"rollingCountResponseFromCache,int"`
-	RollingCountSemaphoreRejected   int    `json:"rollingCountSemaphoreRejected,int"`
-	RollingCountShortCircuited      int    `json:"rollingCountShortCircuited,int"`
-	RollingCountSuccess             int    `json:"rollingCountSuccess,int"`
-	RollingCountThreadPoolRejected  int    `json:"rollingCountThreadPoolRejected,int"`
-	RollingCountTimeout             int    `json:"rollingCOuntTimeout,int"`
+	ReportingHosts       int64             `json:"reportingHosts,int64"`
+	RequestCount         int64             `json:"requestCount,int64"`
+	RollingCountCollapsedRequests   int64  `json:"rollingCountCollapsedRequests,int64"`
+	RollingCountExceptionsThrown    int64  `json:"rollingCountExceptionsThrown,int64"`
+	RollingCountFailure             int64  `json:"rollingCountFailure,int64"`
+	RollingCountFallbackFailure     int64  `json:"rollingCountFallbackFailure,int64"`
+	RollingCountFallbackRejection   int64  `json:"rollingCountFallbackRejection,int64"`
+	RollingCountResponseFromCache   int64  `json:"rollingCountResponseFromCache,int64"`
+	RollingCountSemaphoreRejected   int64  `json:"rollingCountSemaphoreRejected,int64"`
+	RollingCountShortCircuited      int64  `json:"rollingCountShortCircuited,int64"`
+	RollingCountSuccess             int64  `json:"rollingCountSuccess,int64"`
+	RollingCountThreadPoolRejected  int64  `json:"rollingCountThreadPoolRejected,int64"`
+	RollingCountTimeout             int64  `json:"rollingCOuntTimeout,int64"`
 	Type                            string `json:"type,string"`
 	// Don't blame me for these awful names.
 	// I'm preserving the bad names Hystrix uses
 	PropertyValueCircuitBreakerEnabled                            bool   `json:"propertyValue_circuitBreakerEnabled,bool"`
-	PropertyValueCircuitBreakerErrorThresholdPercentage           int    `json:"propertyValue_circuitBreakerErrorThresholdPercentage,int"`
+	PropertyValueCircuitBreakerErrorThresholdPercentage           int64  `json:"propertyValue_circuitBreakerErrorThresholdPercentage,int64"`
 	PropertyValueCircuitBreakerForceOpen                          bool   `json:"propertyValue_circuitBreakerForceOpen,bool"`
 	PropertyValueCircuitBreakerForceClosed                        bool   `json:"propertyValue_circuitBreakerForceClosed,bool"`
-	PropertyValueCircuitBreakerRequestVolumeThreshold             int    `json:"propertyValue_circuitBreakerRequestVolumeThreshold,int"`
-	PropertyValueCircuitBreakerSleepWindowInMilliseconds          int    `json:"propertyValue_circuitBreakerSleepWindowInMilliseconds,int"`
-	PropertyValueExecutionIsolationSemaphoreMaxConcurrentRequests int    `json:"propertyValue_executionIsolationSemaphoreMaxConcurrentRequests,int"`
+	PropertyValueCircuitBreakerRequestVolumeThreshold             int64  `json:"propertyValue_circuitBreakerRequestVolumeThreshold,int64"`
+	PropertyValueCircuitBreakerSleepWindowInMilliseconds          int64  `json:"propertyValue_circuitBreakerSleepWindowInMilliseconds,int64"`
+	PropertyValueExecutionIsolationSemaphoreMaxConcurrentRequests int64  `json:"propertyValue_executionIsolationSemaphoreMaxConcurrentRequests,int64"`
 	PropertyValueExecutionIsolationStrategy                       string `json:"propertyValue_executionIsolationStrategy,string"`
 	PropertyValueExecutionIsolationThreadPoolKeyOverride          string `json:"propertyValue_executionIsolationThreadPoolKeyOverride,string"`
-	PropertyValueExecutionIsolationThreadTimeoutInMilliseconds    int    `json:"propertyValue_executionIsolationThreadTimeoutInMilliseconds,string"`
-	PropertyValueFallbackIsolationSemaphoreMaxConcurrentRequests  int    `json:"propertyValue_fallbackIsolationSeampahoreMaxConcurrentRequests,int"`
-	PropertyValueMetricsRollingStatisticalWindowInMilliseconds    int    `json:"propertyValue_metricsRollingStatisticalWindowInMilliseconds,int"`
+	PropertyValueExecutionIsolationThreadTimeoutInMilliseconds    int64  `json:"propertyValue_executionIsolationThreadTimeoutInMilliseconds,string"`
+	PropertyValueFallbackIsolationSemaphoreMaxConcurrentRequests  int64  `json:"propertyValue_fallbackIsolationSeampahoreMaxConcurrentRequests,int64"`
+	PropertyValueMetricsRollingStatisticalWindowInMilliseconds    int64  `json:"propertyValue_metricsRollingStatisticalWindowInMilliseconds,int64"`
 	PropertyValueRequestCacheEnabled                              bool   `json:"propertyValue_requestCacheEnabled,bool"`
 	PropertyValueRequestLogEnabled                                bool   `json:"propertyValue_requestLogEnabled,bool"`
 }
@@ -130,8 +132,46 @@ func (s SSEString) ParseHystrixStream() (HystrixStream, error) {
 	}
 }
 
-func (h HystrixStream) ToCircuitBreaker() (CircuitBreaker, error) {
-	return CircuitBreaker{}, nil
+func (h HystrixHistogram) ToLatencyHistogram() (LatencyHistogram, error) {
+	return LatencyHistogram{}, nil
+}
+
+func (h HystrixStream) ToCircuitBreaker() (*CircuitBreaker, error) {
+	latency, err := h.LatencyTotal.ToLatencyHistogram()
+
+	if err != nil {
+		return nil, err
+	}
+
+	var breakerCount BreakerCount
+	if h.IsCircuitBreakerOpen {
+		breakerCount = BreakerCount{OpenCount: 1, ClosedCount: 0}
+	} else {
+		breakerCount = BreakerCount{OpenCount: 0, ClosedCount: 1}
+	}
+
+	var currentTime time.Time
+
+	// This is how I parse the time.
+	parsedTime, err := strconv.Atoi(h.CurrentTime)
+	if err != nil {
+		return nil, err
+	} else {
+		// Split hystrix ms encoded unix time into s and ns
+		currentTime = time.Unix(int64(parsedTime / 1000), int64((parsedTime % 1000) * 1000))
+	}
+
+	return &CircuitBreaker {
+		Name: h.Group + h.Name,
+		SuccessCount: h.RollingCountSuccess,
+		FailCount: 1,
+		FallbackCount: 1,
+		ShortCircuitCount: 1,
+		WindowDuration: 1,
+		CurrentTime: currentTime,
+		BreakerStatus: breakerCount,
+		Latency: latency,
+	}, nil
 }
 
 func (c CircuitBreaker) ToJSON() string {
@@ -140,6 +180,7 @@ func (c CircuitBreaker) ToJSON() string {
 			"\"name\":%v," +
 			"\"successCount\":%v," +
 			"\"failCount\":%v," +
+			"\"fallbackCount\":%v," +
 			"\"shortCircuitCount\":%v," +
 			"\"windowDuration\":%v," +
 			"\"currentTime\":%v," +
@@ -149,6 +190,7 @@ func (c CircuitBreaker) ToJSON() string {
 		c.Name,
 		c.SuccessCount,
 		c.FailCount,
+		c.FallbackCount,
 		c.ShortCircuitCount,
 		(c.WindowDuration.Nanoseconds() / 1000),
 		c.CurrentTime.Format(time.RFC3339),
