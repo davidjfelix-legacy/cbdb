@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sync"
 	"bufio"
 	"os"
 	"net/http"
@@ -256,9 +257,30 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
-	stdout :=  bufio.NewWriter(os.Stdout)
-	stdout.ReadFrom(resp.Body)
-	defer stdout.Flush()
+	var wg sync.WaitGroup
+	c := make(chan rune)
+	stdout := bufio.NewWriter(os.Stdout)
+	bodyin := bufio.NewReader(resp.Body)
+	wg.Add(2)
+	//FIXME: need to handle cleanup of the channel and waitgroup
+	go func() {
+		//FIXME: This doesn't check errors at all or break cleanly
+		defer wg.Done()
+		for {
+			r, _, _ := bodyin.ReadRune()
+			c <- r
+		}
+	}()
+	go func() {
+		//FIXME: This is probably not safe
+		defer wg.Done()
+		for {
+			r := <-c
+			stdout.WriteRune(r)
+			stdout.Flush()
+		}
+	}()
+	wg.Wait()
 }
 
 
