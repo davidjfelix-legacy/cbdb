@@ -66,3 +66,76 @@ type HystrixHistogram struct {
 	Percentile100 int64 `json:"100,int64"`
 }
 
+
+func (s SSEString) ParseHystrixStream() (HystrixStream, error) {
+	// The eventsource string isn't big short circuit
+	if len(s) < 8 {
+		return HystrixStream{}, errors.New("Event string too short to parse")
+	}
+
+	// The eventsource string isn't data
+	if s[:6] != "data: " {
+		return HystrixStream{}, errors.New("Can't parse non-data event")
+	}
+
+	// Try to parse JSON
+	var ret HystrixStream
+	resp := json.Unmarshal([]byte(s[7:]), &ret)
+
+	if resp == nil {
+		return ret, nil
+	} else {
+		return HystrixStream{}, resp
+	}
+}
+
+func (h HystrixHistogram) ToLatencyHistogram(mean int64) LatencyHistogram {
+	return LatencyHistogram {
+		Mean: mean,
+		Median: h.Percentile50,
+		Min: h.Percentile0,
+		Max: h.Percentile100,
+		Percentile25: h.Percentile25,
+		Percentile75: h.Percentile75,
+		Percentile90: h.Percentile90,
+		Percentile95: h.Percentile95,
+		Percentile99: h.Percentile99,
+		Percentile995: h.Percentile995,
+		// Unfortunately, the closest we have is an estimate between 99.5 and 100. We'll take it
+		Percentile999: (h.Percentile100 + h.Percentile995) / 2,
+	}
+}
+
+func (h HystrixStream) ToCircuitBreaker() (CircuitBreaker, error) {
+	var breakerCount BreakerCount
+	if h.IsCircuitBreakerOpen {
+		breakerCount = BreakerCount{OpenCount: 1, ClosedCount: 0}
+	} else {
+		breakerCount = BreakerCount{OpenCount: 0, ClosedCount: 1}
+	}
+
+	var currentTime time.Time
+
+	// This is how I parse the time.
+	parsedTime, err := strconv.Atoi(h.CurrentTime)
+	if err != nil {
+		return CircuitBreaker{}, err
+	} else {
+		// Split hystrix ms encoded unix time into s and ns
+		currentTime = time.Unix(int64(parsedTime / 1000), int64((parsedTime % 1000) * 1000))
+	}
+
+	return CircuitBreaker {
+		Name: h.Group + h.Name,
+		SuccessCount: h.RollingCountSuccess,
+		FailCount: 1,
+		FallbackCount: 1,
+		ShortCircuitCount: 1,
+		WindowDuration: 1,
+		CurrentTime: currentTime,
+		BreakerStatus: breakerCount,
+		Latency: h.LatencyTotal.ToLatencyHistogram(h.LatencyTotalMean),
+	}, nil
+}
+
+
