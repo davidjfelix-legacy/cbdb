@@ -44,7 +44,6 @@ type CircuitBreaker struct {
 	Latency           LatencyHistogram
 }
 
-type SSEString string
 
 
 func (c CircuitBreaker) ToJSON() string {
