@@ -1,5 +1,10 @@
 package main
 
+import (
+	"strconv"
+	"time"
+)
+
 // A snapshot transcription of the hystrix.stream JSON object
 // This is here for legacy support only. Only update if the fields change or
 // In the event of an inevitable bug.
@@ -79,6 +84,7 @@ func (h HystrixHistogram) ToLatencyHistogram(mean int64) LatencyHistogram {
 		Percentile95: h.Percentile95,
 		Percentile99: h.Percentile99,
 		Percentile995: h.Percentile995,
+		// FIXME: there's actually a way to calculate this from EWMA
 		// Unfortunately, the closest we have is an estimate between 99.5 and 100. We'll take it
 		Percentile999: (h.Percentile100 + h.Percentile995) / 2,
 	}

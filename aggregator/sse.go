@@ -1,5 +1,10 @@
 package main
 
+import (
+	"errors"
+	"encoding/json"
+)
+
 type SSEString string
 
 func (s SSEString) ParseHystrixStream() (HystrixStream, error) {

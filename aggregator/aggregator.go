@@ -7,9 +7,6 @@ import (
 	"net/http"
 	"time"
 	"fmt"
-	"errors"
-	"encoding/json"
-	"strconv"
 )
 
 
@@ -44,6 +41,29 @@ type CircuitBreaker struct {
 	Latency           LatencyHistogram
 }
 
+func AggregateCircuitBreakers(breakers []CircuitBreaker) (CircuitBreaker, error) {
+	return CircuitBreaker {}, nil
+}
+
+func AggregateLatencyHistograms(histograms []LatencyHistogram) (LatencyHistogram, error) {
+	return LatencyHistogram {}, nil
+}
+
+func AggregateBreakerCounts(counts []BreakerCount) (BreakerCount, error) {
+	var openCount int64
+	var closedCount int64
+
+	for _, count := range counts {
+		// FIXME: handle integer overflows with error
+		openCount += count.OpenCount
+		closedCount += count.ClosedCount
+	}
+
+	return BreakerCount {
+		OpenCount: openCount,
+		ClosedCount: closedCount,
+	}, nil
+}
 
 
 func (c CircuitBreaker) ToJSON() string {
@@ -145,5 +165,4 @@ func main() {
 	}()
 	wg.Wait()
 }
-
 
