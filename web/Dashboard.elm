@@ -6,61 +6,11 @@ import Html.Attributes exposing (..)
 import Maybe
 import Signal exposing (Signal, Address)
 import String
+import Circuit exposing (Circuit)
 
 
 type alias Dashboard =
   { circuits : List Circuit }
-
-
-type alias Circuit =
-  { serviceName: String
-  , circuitName: String
-  , currentStatus: BreakerStatus
-  , currentLatency: LatencyHistogram
-  , currentCount: CircuitCounter
-  , historicInformation: List CircuitHistory
-  }
-
-type alias CircuitHistory =
-  { latency: LatencyHistogram
-  , count: CircuitCounter
-  }
-
-
-type alias CircuitCounter =
-  { total: Int
-  , failures: Maybe Int
-  , success: Maybe Int
-  , shortCircuited: Maybe Int
-  , failover: Maybe Int
-  }
-
-
-type alias LatencyHistogram =
-  { mean: Int
-  , median: Int
-  , min: Int
-  , max: Int
-  , percentile25: Maybe Int
-  , percentile75: Maybe Int
-  , percentile90: Maybe Int
-  , percentile95: Maybe Int
-  , percentile99: Maybe Int
-  , percentile995: Maybe Int
-  , percentile999: Maybe Int
-  }
-
-
-type alias PartiallyOpenBreaker =
-  { open: Int
-  , closed: Int
-  }
-
-
-type BreakerStatus
-  = Open Int
-  | Partial PartiallyOpenBreaker
-  | Closed Int
 
 
 emptyDashboard : Dashboard
@@ -69,22 +19,20 @@ emptyDashboard =
 
 type Action
   = NoOp
-  | AddCircuit String
+  | AddCircuit Circuit
 
 
 update : Action -> Dashboard -> Dashboard
 update action model =
   case action of
     NoOp -> model
-    AddCircuit str ->
+    AddCircuit circuit ->
       { model |
         circuits =
           if String.isEmpty str
             then model.circuits
-            else model.circuits ++ [str]
+            else model.circuits ++ [circuit]
       }
-
-
 
 view : Address Action -> Dashboard -> Html
 view action model =
