@@ -9,18 +9,17 @@ import String
 
 
 type alias Dashboard =
-  { circuits : List String }
+  { circuits : List Circuit }
 
 
 type alias Circuit =
   { serviceName: String
-  , name: String
+  , circuitName: String
   , currentStatus: BreakerStatus
   , currentLatency: LatencyHistogram
   , currentCount: CircuitCounter
   , historicInformation: List CircuitHistory
   }
-
 
 type alias CircuitHistory =
   { latency: LatencyHistogram
