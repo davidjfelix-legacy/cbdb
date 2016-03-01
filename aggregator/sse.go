@@ -22,9 +22,9 @@ func (s SSEString) ParseHystrixStream() (HystrixStream, error) {
 	var ret HystrixStream
 	resp := json.Unmarshal([]byte(s[7:]), &ret)
 
-	if resp == nil {
-		return ret, nil
-	} else {
+	if resp != nil {
 		return HystrixStream{}, resp
 	}
+	
+	return ret, nil
 }
